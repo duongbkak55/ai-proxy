@@ -89,6 +89,63 @@ export async function atomicWriteJson(filePath: string, data: unknown): Promise<
 }
 
 /**
+ * Write text content atomically to a file (synchronous version).
+ * Uses temp file + atomic rename pattern to ensure durability.
+ *
+ * @param filePath Target file path
+ * @param content Text content to write
+ * @throws Error if write operation fails
+ */
+export function atomicWriteSync(filePath: string, content: string): void {
+  const dir = path.dirname(filePath);
+  const base = path.basename(filePath);
+  const tempPath = path.join(dir, `.${base}.tmp.${crypto.randomUUID()}`);
+
+  let success = false;
+
+  try {
+    // Ensure parent directory exists
+    ensureDirSync(dir);
+
+    // Write to temp file with exclusive creation
+    const fd = fsSync.openSync(tempPath, 'wx', 0o600);
+    try {
+      fsSync.writeSync(fd, content, 0, 'utf-8');
+      // Sync file data to disk before rename
+      fsSync.fsyncSync(fd);
+    } finally {
+      fsSync.closeSync(fd);
+    }
+
+    // Atomic rename - replaces target file if it exists
+    fsSync.renameSync(tempPath, filePath);
+
+    success = true;
+
+    // Best-effort directory fsync to ensure rename is durable
+    try {
+      const dirFd = fsSync.openSync(dir, 'r');
+      try {
+        fsSync.fsyncSync(dirFd);
+      } finally {
+        fsSync.closeSync(dirFd);
+      }
+    } catch {
+      // Some platforms don't support directory fsync - that's okay
+    }
+  } finally {
+    // Clean up temp file on error
+    if (!success) {
+      try {
+        fsSync.unlinkSync(tempPath);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+  }
+}
+
+/**
  * Read and parse JSON file with error handling.
  * Returns null if file doesn't exist or on parse errors.
  *
