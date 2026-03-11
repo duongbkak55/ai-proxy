@@ -27,6 +27,8 @@ const BLOCKED_HOST_PATTERNS = [
   /^\[?::1\]?$/, // IPv6 loopback
   /^\[?fc00:/i, // IPv6 unique local
   /^\[?fe80:/i, // IPv6 link-local
+  /^\[?::ffff:/i, // IPv6-mapped IPv4 (all private ranges accessible via this prefix)
+  /^\[?0{0,4}:{0,2}ffff:/i, // IPv6-mapped IPv4 expanded forms
 ];
 
 // Blocked URL schemes
@@ -65,6 +67,13 @@ export function validateUrlForSSRF(urlString: string): SSRFValidationResult {
         reason: `Hostname '${hostname}' resolves to a blocked internal/private address`,
       };
     }
+  }
+
+  if (/^0x[0-9a-f]+$/i.test(hostname)) {
+    return {
+      allowed: false,
+      reason: `Hostname '${hostname}' looks like a hex-encoded IP address`,
+    };
   }
 
   // Block URLs with credentials (user:pass@host)
