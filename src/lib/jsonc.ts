@@ -47,10 +47,14 @@ export function stripJsoncComments(content: string): string {
       result += content[i];
       i++;
       while (i < content.length && content[i] !== '"') {
-        // Handle escaped quotes
-        if (content[i] === '\\' && content[i + 1] === '"') {
+        if (content[i] === '\\') {
           result += content[i];
           i++;
+          if (i < content.length) {
+            result += content[i];
+            i++;
+          }
+          continue;
         }
         result += content[i];
         i++;
