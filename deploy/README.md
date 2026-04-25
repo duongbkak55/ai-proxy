@@ -1,4 +1,4 @@
-# Deploy `@omc-ai/proxy`
+# Deploy `@duongbkak55/ai-proxy`
 
 Three supported deployment modes:
 
@@ -10,7 +10,7 @@ Three supported deployment modes:
 
 ```bash
 # 1. Clone or fetch deploy/ from the repo
-curl -L https://github.com/duongbkak55/omc-ai-proxy/archive/refs/heads/main.tar.gz | tar xz --strip-components=1 omc-ai-proxy-main/deploy
+curl -L https://github.com/duongbkak55/ai-proxy/archive/refs/heads/main.tar.gz | tar xz --strip-components=1 ai-proxy-main/deploy
 
 cd deploy
 
@@ -41,9 +41,9 @@ DNS: point `DOMAIN` A/AAAA records at the host before starting (caddy needs reac
 sudo apt-get install -y nodejs npm   # or your distro equivalent
 
 # 2. Install proxy (when published)
-sudo npm install -g @omc-ai/proxy
+sudo npm install -g @duongbkak55/ai-proxy
 # Or, build from source:
-git clone https://github.com/duongbkak55/omc-ai-proxy /opt/omc-proxy
+git clone https://github.com/duongbkak55/ai-proxy /opt/omc-proxy
 cd /opt/omc-proxy && npm ci && npm run build
 
 # 3. Create user + dirs
@@ -77,8 +77,8 @@ Front with caddy/nginx/traefik for TLS — bind config to `127.0.0.1:11434` and 
 ## Mode 3 — Manual binary (testing)
 
 ```bash
-git clone https://github.com/duongbkak55/omc-ai-proxy
-cd omc-ai-proxy
+git clone https://github.com/duongbkak55/ai-proxy
+cd ai-proxy
 npm ci && npm run build
 ANTHROPIC_API_KEY=sk-ant-... node dist/cli.js start --config deploy/sample-config.jsonc
 ```

@@ -1,4 +1,4 @@
-// Sample @omc-ai/proxy config.
+// Sample @duongbkak55/ai-proxy config.
 // Place this at /etc/omc-proxy/config.jsonc (Docker) or wherever --config points.
 // Set ANTHROPIC_API_KEY in the environment, NEVER commit secrets here.
 {

@@ -1,4 +1,4 @@
-# Caddy config for omc-ai-proxy.
+# Caddy config for ai-proxy.
 # Terminates TLS via Let's Encrypt and reverse-proxies to omc-proxy:11434.
 # Override DOMAIN and ACME_EMAIL via env or compose .env file.
 
