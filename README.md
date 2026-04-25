@@ -1,4 +1,4 @@
-# @omc-ai/proxy
+# @duongbkak55/ai-proxy
 
 AI egress proxy with DLP (Data Loss Prevention), allowlist enforcement, and audit logging. Designed to sit between AI-coding agents (e.g. Claude Code) and the upstream Anthropic API, redacting source code identifiers — package names, class names, internal imports, secrets — before they leave your network.
 
@@ -20,7 +20,7 @@ Originally extracted from [oh-my-claudecode](https://github.com/duongbkak55/oh-m
 ## Install
 
 ```bash
-npm install -g @omc-ai/proxy
+npm install -g @duongbkak55/ai-proxy
 omc-proxy --help
 ```
 

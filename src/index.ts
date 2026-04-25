@@ -1,5 +1,5 @@
 /**
- * Public API surface for @omc-ai/proxy.
+ * Public API surface for @duongbkak55/ai-proxy.
  * Consumers can either run the bundled CLI (`omc-proxy start`) or
  * import the server programmatically.
  */

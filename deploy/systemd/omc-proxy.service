@@ -1,6 +1,6 @@
 [Unit]
 Description=OMC AI Egress Proxy
-Documentation=https://github.com/duongbkak55/omc-ai-proxy
+Documentation=https://github.com/duongbkak55/ai-proxy
 After=network-online.target
 Wants=network-online.target
 

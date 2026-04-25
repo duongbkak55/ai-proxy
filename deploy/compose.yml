@@ -1,10 +1,10 @@
-# Sample docker-compose for omc-ai-proxy + caddy.
+# Sample docker-compose for ai-proxy + caddy.
 # Adjust DOMAIN, ACME_EMAIL, and bind mounts before deploying.
 # Caddy handles TLS termination and reverse-proxies to the proxy on internal network.
 
 services:
   omc-proxy:
-    image: ghcr.io/duongbkak55/omc-ai-proxy:latest
+    image: ghcr.io/duongbkak55/ai-proxy:latest
     # Or build locally:
     # build:
     #   context: ..

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Multi-stage Dockerfile for @omc-ai/proxy.
+# Multi-stage Dockerfile for @duongbkak55/ai-proxy.
 # Builder: node:20-alpine compiles TypeScript.
 # Runtime: distroless minimal Node image.
 

@@ -1,5 +1,5 @@
 {
-  "name": "@omc-ai/proxy",
+  "name": "@duongbkak55/ai-proxy",
   "version": "0.1.0",
   "description": "AI egress proxy with DLP, allowlist, audit, and DLP lanes (regex, SQL, AST). Originally extracted from oh-my-claudecode.",
   "type": "module",
@@ -46,11 +46,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/duongbkak55/omc-ai-proxy.git"
+    "url": "git+https://github.com/duongbkak55/ai-proxy.git"
   },
-  "homepage": "https://github.com/duongbkak55/omc-ai-proxy#readme",
+  "homepage": "https://github.com/duongbkak55/ai-proxy#readme",
   "bugs": {
-    "url": "https://github.com/duongbkak55/omc-ai-proxy/issues"
+    "url": "https://github.com/duongbkak55/ai-proxy/issues"
   },
   "keywords": [
     "ai",
