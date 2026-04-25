@@ -68,6 +68,7 @@ omc-proxy config print [--config <path>]
 | [docs/auth.md](./docs/auth.md) | Bearer-token auth lane, rotation, rate-limit |
 | [docs/configuration.md](./docs/configuration.md) | Full config schema reference |
 | [docs/api.md](./docs/api.md) | HTTP endpoint reference |
+| [docs/integrations.md](./docs/integrations.md) | Code agents (Claude Code, Cursor, Cline, ...) and routers (9router) |
 | [deploy/README.md](./deploy/README.md) | Docker / systemd / manual deploy |
 | [ROADMAP.md](./ROADMAP.md) | Shipped + planned features |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |
