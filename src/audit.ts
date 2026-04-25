@@ -12,7 +12,7 @@
 
 import { openSync, writeSync, fsyncSync, closeSync } from "fs";
 import { join } from "path";
-import { ensureDirSync } from "../lib/atomic-write.js";
+import { ensureDirSync } from "./lib/atomic-write.js";
 import type { DlpMatch } from "./dlp.js";
 import type { CompiledPattern } from "./config.js";
 import { applyPolicy } from "./dlp.js";

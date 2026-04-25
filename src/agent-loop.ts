@@ -23,7 +23,7 @@ import type {
 } from "./dlp.js";
 import { applyPolicy } from "./dlp.js";
 import { validateToolCall } from "./allowlist.js";
-import { atomicWriteJsonSync, safeReadJson } from "../lib/atomic-write.js";
+import { atomicWriteJsonSync, safeReadJson } from "./lib/atomic-write.js";
 import type { AuditEvent } from "./audit.js";
 import { auditEvent, summarizeMatches } from "./audit.js";
 

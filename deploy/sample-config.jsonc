@@ -1,0 +1,53 @@
+// Sample @omc-ai/proxy config.
+// Place this at /etc/omc-proxy/config.jsonc (Docker) or wherever --config points.
+// Set ANTHROPIC_API_KEY in the environment, NEVER commit secrets here.
+{
+  "listen": {
+    // Bind to 0.0.0.0 only when behind a reverse proxy (caddy) or firewalled.
+    // Default 127.0.0.1 is loopback-only.
+    "host": "0.0.0.0",
+    "port": 11434
+  },
+
+  "upstream": {
+    "url": "https://api.anthropic.com/v1/messages",
+    "timeoutMs": 60000
+  },
+
+  // Bearer token auth (Phase B — pending PR).
+  // When ready, generate tokens with: omc-proxy auth issue --id my-client --rpm 60
+  "auth": {
+    "enabled": false,
+    "headerName": "Authorization",
+    "tokens": []
+  },
+
+  "dlp": {
+    // Pattern-based redaction (regex lane).
+    "patterns": [
+      {
+        "name": "anthropic_key",
+        "regex": "sk-ant-[a-zA-Z0-9_-]{20,}",
+        "classifier": "SECRET"
+      },
+      {
+        "name": "github_pat",
+        "regex": "ghp_[a-zA-Z0-9]{36}",
+        "classifier": "SECRET"
+      }
+    ]
+  },
+
+  "sqlDlp": {
+    "enabled": true
+  },
+
+  "astDlp": {
+    "enabled": true
+  },
+
+  "audit": {
+    "enabled": true,
+    "directory": "/var/lib/omc-proxy/audit"
+  }
+}

@@ -1,0 +1,37 @@
+# Caddy config for omc-ai-proxy.
+# Terminates TLS via Let's Encrypt and reverse-proxies to omc-proxy:11434.
+# Override DOMAIN and ACME_EMAIL via env or compose .env file.
+
+{
+	email {$ACME_EMAIL}
+	# To pin to a specific CA, uncomment:
+	# acme_ca https://acme-v02.api.letsencrypt.org/directory
+}
+
+{$DOMAIN} {
+	# Enforce HTTPS (Caddy does this automatically when domain has cert)
+	encode gzip
+
+	# Optional: rate-limit at edge before reaching the proxy auth layer.
+	# Requires caddy-ratelimit plugin (https://github.com/mholt/caddy-ratelimit).
+	# rate_limit {
+	# 	zone per_ip {
+	# 		key {remote_host}
+	# 		events 100
+	# 		window 1m
+	# 	}
+	# }
+
+	reverse_proxy omc-proxy:11434 {
+		# Forward standard headers
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Real-IP {remote_host}
+
+		# Stream SSE responses (Anthropic uses Server-Sent Events)
+		flush_interval -1
+	}
+
+	# Bring-your-own cert: comment out the auto-HTTPS block above and use:
+	# tls /path/to/cert.pem /path/to/key.pem
+}

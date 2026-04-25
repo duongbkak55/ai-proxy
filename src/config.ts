@@ -10,7 +10,7 @@ import { homedir } from "os";
 import { join } from "path";
 import { z } from "zod";
 import safeRegexDefault from "safe-regex";
-import { parseJsonc } from "../utils/jsonc.js";
+import { parseJsonc } from "./lib/jsonc.js";
 
 // safe-regex is CJS and exported as default function.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

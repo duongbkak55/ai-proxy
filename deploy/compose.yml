@@ -1,0 +1,51 @@
+# Sample docker-compose for omc-ai-proxy + caddy.
+# Adjust DOMAIN, ACME_EMAIL, and bind mounts before deploying.
+# Caddy handles TLS termination and reverse-proxies to the proxy on internal network.
+
+services:
+  omc-proxy:
+    image: ghcr.io/duongbkak55/omc-ai-proxy:latest
+    # Or build locally:
+    # build:
+    #   context: ..
+    #   dockerfile: deploy/Dockerfile
+    container_name: omc-proxy
+    restart: unless-stopped
+    expose:
+      - "11434"
+    volumes:
+      - ./config.jsonc:/etc/omc-proxy/config.jsonc:ro
+      - omc-proxy-state:/app/.omc
+    environment:
+      - NODE_ENV=production
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    networks:
+      - omc-net
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: omc-proxy-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      - DOMAIN=${DOMAIN:-proxy.example.com}
+      - ACME_EMAIL=${ACME_EMAIL}
+    networks:
+      - omc-net
+    depends_on:
+      - omc-proxy
+
+volumes:
+  omc-proxy-state:
+  caddy-data:
+  caddy-config:
+
+networks:
+  omc-net:
+    driver: bridge

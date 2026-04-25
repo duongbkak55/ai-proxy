@@ -1,0 +1,45 @@
+[Unit]
+Description=OMC AI Egress Proxy
+Documentation=https://github.com/duongbkak55/omc-ai-proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=omc-proxy
+Group=omc-proxy
+WorkingDirectory=/opt/omc-proxy
+Environment="NODE_ENV=production"
+EnvironmentFile=-/etc/omc-proxy/env
+ExecStart=/usr/bin/node /opt/omc-proxy/dist/cli.js start --config /etc/omc-proxy/config.jsonc
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/var/lib/omc-proxy /var/log/omc-proxy
+
+# Resource limits
+LimitNOFILE=65536
+TasksMax=512
+
+# Standard out/err to journal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=omc-proxy
+
+[Install]
+WantedBy=multi-user.target

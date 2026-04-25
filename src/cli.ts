@@ -12,7 +12,7 @@ import {
 } from "./config.js";
 import { startProxy } from "./server.js";
 import { auditFilePath } from "./audit.js";
-import { atomicWriteJsonSync, safeReadJson } from "../lib/atomic-write.js";
+import { atomicWriteJsonSync, safeReadJson } from "./lib/atomic-write.js";
 
 interface HitlRecord {
   id: string;

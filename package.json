@@ -1,0 +1,65 @@
+{
+  "name": "@omc-ai/proxy",
+  "version": "0.1.0",
+  "description": "AI egress proxy with DLP, allowlist, audit, and DLP lanes (regex, SQL, AST). Originally extracted from oh-my-claudecode.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "omc-proxy": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "deploy"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/cli.js start"
+  },
+  "dependencies": {
+    "@ast-grep/napi": "^0.31.0",
+    "commander": "^12.1.0",
+    "node-sql-parser": "^5.4.0",
+    "safe-regex": "^2.1.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.7",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.17"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/duongbkak55/omc-ai-proxy.git"
+  },
+  "homepage": "https://github.com/duongbkak55/omc-ai-proxy#readme",
+  "bugs": {
+    "url": "https://github.com/duongbkak55/omc-ai-proxy/issues"
+  },
+  "keywords": [
+    "ai",
+    "proxy",
+    "dlp",
+    "anthropic",
+    "claude",
+    "security",
+    "egress"
+  ],
+  "license": "MIT"
+}

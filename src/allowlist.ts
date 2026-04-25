@@ -4,7 +4,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { validateUrlForSSRF } from "../utils/ssrf-guard.js";
+import { validateUrlForSSRF } from "./lib/ssrf-guard.js";
 import type { ProxyConfig } from "./config.js";
 import type { AnthropicRequestBody } from "./dlp.js";
 
