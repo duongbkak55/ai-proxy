@@ -11,6 +11,7 @@ import { join } from "path";
 import { z } from "zod";
 import safeRegexDefault from "safe-regex";
 import { parseJsonc } from "./lib/jsonc.js";
+import { TokenRecordSchema } from "./auth.js";
 
 // safe-regex is CJS and exported as default function.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,7 +64,14 @@ export const ProxyConfigSchema = z.object({
     maxToolOutputBytes: z.number().int().positive().default(100_000),
   }),
   auth: z.object({
+    // Legacy single-token mode: if `tokens` and `tokensFile` are both empty,
+    // server.ts falls back to comparing against env[tokenEnv]. Existing
+    // deployments keep working unchanged.
     tokenEnv: z.string().min(1).default("OMC_PROXY_CLIENT_TOKEN"),
+    // Multi-token mode (Phase B):
+    headerName: z.string().min(1).default("Authorization"),
+    tokens: z.array(TokenRecordSchema).default([]),
+    tokensFile: z.string().optional(),
   }),
   vault: z
     .object({
