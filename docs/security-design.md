@@ -1,8 +1,11 @@
 # AI Egress Proxy — Security Design
 
-> **Document status**: Living design document. Regenerated from source code and the
-> 8-section outline in `docs/proxy/TODO.md` (branch `claude/ai-proxy-security-HNLsW`,
-> last pushed commit `8f04b25`).
+> **Document status**: Living design document. Originally regenerated from source
+> code in branch `claude/ai-proxy-security-HNLsW` of `oh-my-claudecode` (commit
+> `8f04b25`); subsequently extended with the auth lane, deploy artifacts, and the
+> `git filter-repo` extraction into the standalone `duongbkak55/ai-proxy` repo.
+> When details below conflict with current code, the code is authoritative — file
+> an issue and this doc gets updated next.
 >
 > **Audience**: Security engineers, backend architects, compliance officers (DPO/CISO),
 > and developers integrating the proxy into their development workflow.
@@ -66,15 +69,20 @@ Engineering teams increasingly rely on AI coding assistants to accelerate develo
 - **Source-code secrets**: API keys, JWT tokens, private key blobs, credentials.
 - **Trade-sensitive source identifiers**: internal npm/Maven package names, project codenames, partner names, internal hostnames, proprietary SQL schema names — items that collectively constitute "confidential business information" under Luật Cạnh tranh 2018 Điều 45 and trade secrets under Luật Sở hữu trí tuệ 2005 Điều 84.
 
-Without an interception layer, every prompt sent to a third-party AI API is a potential data-exfiltration event. The AI Egress Proxy (`src/proxy/`) is that interception layer.
+Without an interception layer, every prompt sent to a third-party AI API is a potential data-exfiltration event. The AI Egress Proxy (now `@duongbkak55/ai-proxy`, repo `src/`; previously `oh-my-claudecode/src/proxy/`) is that interception layer.
 
-### What the Three Commits Shipped
+### What Has Shipped
 
-| Commit | SHA | Description |
-|--------|-----|-------------|
-| PoC | `1eb7045` | Seven TypeScript modules, Anthropic-compatible HTTP proxy, regex DLP (block/redact), tool allowlist, HITL approval, audit log, 41 tests |
-| Hardening | `ab9ac90` | 15 review fixes: constant-time bearer auth, SSE rolling-buffer split-secret detection, `realpath` symlink rejection, HITL file-permission check, backpressure, Zod upstream response validation, `fsync` on audit writes, HTTPS-only egress guard, XFF trust flag — tests → 70 |
-| P1 vault + dict | `8f04b25` | Reversible tokenisation: `vault.ts` (in-process `InProcessTokenVault`), `dictionary.ts` (Aho-Corasick, zero npm deps), `sample-dictionary.json`, `tokenize` policy in DLP pipeline, `SseDetokenizer` class, system-prompt injection of DLP anchor, full round-trip — tests → 94 |
+| Phase | Reference | Description |
+|---|---|---|
+| PoC | `1eb7045` | Seven TypeScript modules, Anthropic-compatible HTTP proxy, regex DLP (block/redact), tool allowlist, HITL approval, audit log, 41 tests. |
+| Hardening | `ab9ac90` | 15 review fixes: constant-time bearer auth, SSE rolling-buffer split-secret detection, `realpath` symlink rejection, HITL file-permission check, backpressure, Zod upstream response validation, `fsync` on audit writes, HTTPS-only egress guard, XFF trust flag — tests → 70. |
+| P1 vault + dict | `8f04b25` | Reversible tokenisation: `vault.ts`, `dictionary.ts` (Aho-Corasick, zero npm deps), `sample-dictionary.json`, `tokenize` policy in DLP pipeline, `SseDetokenizer` class, system-prompt injection of DLP anchor — tests → 94. |
+| SQL DLP lane | (oh-my-claudecode PR #3) | `sql-lane.ts` AST-based redaction for fenced SQL blocks via `node-sql-parser`. |
+| AST DLP lane | (oh-my-claudecode PR #5/#7) | `ast-lane.ts` source-code-aware redaction (TS/JS/Python/Java) via `@ast-grep/napi`. |
+| Repo split | (this repo PR #0) | Extracted to standalone `duongbkak55/ai-proxy` via `git filter-repo`; helpers vendored into `src/lib/`. |
+| Auth lane | (this repo PR #1) | `auth.ts` multi-token bearer with sha256 hash, scope, expiry, rotation, per-token rate-limit (token bucket). Backward-compat with legacy env-token mode. CLI `omc-proxy auth issue\|list\|revoke\|rotate`. See [`auth.md`](./auth.md) — tests → 177. |
+| Deploy artifacts | (this repo, scaffold commit) | `Dockerfile` (distroless), `compose.yml` (caddy auto-HTTPS), `Caddyfile`, hardened systemd unit, sample config, 3-mode deploy README. |
 
 ### What This Document Adds
 
