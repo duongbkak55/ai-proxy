@@ -27,7 +27,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/cli.js start"
+    "start": "node dist/cli.js start",
+    "demo:build": "node demo/web/build.mjs",
+    "demo:serve": "npm run demo:build && python3 -m http.server 8000 --directory demo/web"
   },
   "dependencies": {
     "@ast-grep/napi": "^0.31.0",
@@ -38,6 +40,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.19.7",
+    "esbuild": "^0.28.0",
     "typescript": "^5.7.2",
     "vitest": "^4.0.17"
   },
