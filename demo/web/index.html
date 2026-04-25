@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ai-proxy — DLP demo</title>
   <link rel="stylesheet" href="./demo.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.10.0/dist/bundle/asciinema-player.css" />
 </head>
 <body>
   <header class="hdr">
@@ -20,6 +21,12 @@
     </div>
   </header>
 
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="dlp" role="tab" aria-selected="true">DLP Pipeline</button>
+    <button class="tab" data-tab="cli" role="tab" aria-selected="false">CLI Playback (Claude Code)</button>
+  </nav>
+
+  <div data-tab-panel="dlp" class="tab-panel">
   <section class="controls">
     <div class="scenarios">
       <button data-sample="pii" class="btn btn-sample">PII (email, phone)</button>
@@ -112,12 +119,67 @@
     </article>
   </section>
 
+  </div><!-- /tab-panel:dlp -->
+
+  <div data-tab-panel="cli" class="tab-panel" hidden>
+    <section class="cli-explainer">
+      <p class="cli-note">
+        <strong>Synthesised session</strong> ghi lại Claude Code đang chạy với
+        <code>ANTHROPIC_BASE_URL=http://127.0.0.1:11434</code>. Phần terminal là
+        asciicast pre-recorded; phần audit log bên phải xuất hiện theo timeline
+        thật của proxy. Đây là pattern chính xác mà developer thấy: workflow
+        không đổi, security xảy ra ngầm.
+      </p>
+    </section>
+    <section class="cli-grid">
+      <article class="cli-pane cli-pane-term">
+        <header class="pane-h">
+          <span class="step">A</span>
+          <h2>DEVELOPER's TERMINAL</h2>
+          <span class="pane-tag">claude code (CLI)</span>
+        </header>
+        <div id="player" class="player"></div>
+        <div class="player-controls">
+          <button id="player-replay" class="btn btn-primary">▶ Play / Replay</button>
+          <span class="player-hint">25 giây session — dev chỉ thấy plaintext</span>
+        </div>
+      </article>
+
+      <article class="cli-pane cli-pane-audit">
+        <header class="pane-h">
+          <span class="step">B</span>
+          <h2>PROXY AUDIT STREAM</h2>
+          <span class="pane-tag">behind the scenes</span>
+        </header>
+        <div id="audit-stream" class="audit-stream" aria-live="polite">
+          <div class="audit-empty">— bấm Play để xem audit log stream theo timeline —</div>
+        </div>
+      </article>
+    </section>
+    <section class="cli-summary">
+      <h3>Diễn giải</h3>
+      <ol class="cli-steps">
+        <li><strong>t=00s</strong> Dev set <code>ANTHROPIC_BASE_URL</code> vào proxy local + chạy <code>claude</code> như bình thường — chỉ 1 dòng config.</li>
+        <li><strong>t=08–13s</strong> Dev gõ prompt có email khách (alice@example.com), số ĐT (0912345678), codename (ProjectAlpha), package nội bộ (@vng/auth), tên bảng DB (vng_user_payments). Plaintext đầy đủ.</li>
+        <li><strong>t=13.6s</strong> Proxy nhận POST /v1/messages → auth pass → DLP scan.</li>
+        <li><strong>t=13.9–14.1s</strong> 5 match: 2 regex (email, phone) + 3 dictionary (codename, pkg, db table) → vault issue 5 token.</li>
+        <li><strong>t=14.4s</strong> Proxy forward request <em>đã redact</em> sang api.anthropic.com — model chỉ thấy EMAIL_01, PHONE_VN_01, CODENAME_01, PKG_01, DBTABLE_01.</li>
+        <li><strong>t=16–24s</strong> Stream SSE về: mỗi chunk có token → proxy detokenize on-the-fly → dev terminal hiện plaintext lại.</li>
+        <li><strong>t=24.8s</strong> Audit log fsync: hash chain entry với summary (5 match, 7 detok events, blocked=false).</li>
+      </ol>
+      <p class="cli-takeaway">
+        <strong>Takeaway:</strong> developer experience không đổi (Claude Code hiện plaintext alice@example.com như bình thường), nhưng api.anthropic.com KHÔNG BAO GIỜ thấy plaintext.
+      </p>
+    </section>
+  </div><!-- /tab-panel:cli -->
+
   <footer class="ftr">
     <span>Pipeline thật trong production có thêm: SQL AST lane (fenced ```sql), Source-code AST lane (fenced ```ts/py/java), Auth lane (bearer token + rate-limit), Allowlist (banned tools, SSRF).</span>
     <span class="ftr-r">demo bundle: <code>/demo/web/bundle.js</code></span>
   </footer>
 
   <script src="./bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.10.0/dist/bundle/asciinema-player.min.js"></script>
   <script src="./demo.js"></script>
 </body>
 </html>

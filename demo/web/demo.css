@@ -338,6 +338,172 @@ body {
   .reply-arrow { transform: none; padding: 8px 0; }
 }
 
+/* ─── Tabs ─────────────────────────────────────────────────────────────── */
+.tabs {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  color: var(--fg-mute);
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  position: relative;
+  bottom: -1px;
+}
+.tab:hover { color: var(--fg); }
+.tab.active {
+  background: var(--bg-2);
+  border-color: var(--border);
+  border-bottom-color: var(--bg-2);
+  color: var(--accent-2);
+}
+.tab-panel[hidden] { display: none; }
+
+/* ─── CLI Playback tab ─────────────────────────────────────────────────── */
+.cli-explainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 32px 0;
+}
+.cli-note {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  padding: 12px 16px;
+  border-radius: 0 6px 6px 0;
+  margin: 0;
+  color: var(--fg);
+  font-size: 13px;
+}
+.cli-note code { background: var(--bg-3); padding: 1px 6px; border-radius: 3px; color: var(--accent); font-family: var(--code-font); font-size: 12px; }
+
+.cli-grid {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px 32px;
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+  align-items: stretch;
+}
+.cli-pane {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+.player {
+  flex: 1;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+  min-height: 460px;
+}
+.player .ap-player { width: 100%; }
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.player-hint { color: var(--fg-mute); font-size: 12px; }
+
+.audit-stream {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  overflow-y: auto;
+  font-family: var(--code-font);
+  font-size: 11px;
+  min-height: 460px;
+  max-height: 540px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.audit-empty {
+  color: var(--fg-mute);
+  font-style: italic;
+  text-align: center;
+  padding: 24px 16px;
+}
+.audit-line {
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  border-left: 3px solid var(--fg-mute);
+  animation: slideIn 0.3s ease-out;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+.audit-line.stream-auth   { border-left-color: var(--accent); }
+.audit-line.stream-dlp    { border-left-color: var(--green); }
+.audit-line.stream-dict   { border-left-color: var(--green); }
+.audit-line.stream-vault  { border-left-color: var(--accent-2); }
+.audit-line.stream-egress { border-left-color: var(--accent); }
+.audit-line.stream-sse    { border-left-color: var(--accent); }
+.audit-line.stream-detok  { border-left-color: var(--green); }
+.audit-line.stream-audit  { border-left-color: var(--yellow); background: var(--yellow-bg); }
+.audit-line .audit-stream-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+  color: var(--fg-mute);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.cli-summary {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 32px 32px;
+}
+.cli-summary h3 { margin: 16px 0 8px; font-size: 14px; }
+.cli-steps {
+  font-size: 13px;
+  color: var(--fg);
+  padding-left: 24px;
+  margin: 0 0 12px;
+}
+.cli-steps li { margin-bottom: 6px; }
+.cli-steps code { background: var(--bg-3); padding: 1px 6px; border-radius: 3px; color: var(--accent); font-family: var(--code-font); font-size: 12px; }
+.cli-takeaway {
+  background: var(--green-bg);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin: 0;
+  color: var(--fg);
+  font-size: 13px;
+}
+.cli-takeaway strong { color: var(--green); }
+
+@media (max-width: 1100px) {
+  .cli-grid { grid-template-columns: 1fr; }
+  .audit-stream { min-height: 280px; max-height: 320px; }
+}
+
 /* Animation when running */
 .pulsing {
   animation: pulse 0.8s ease-in-out;

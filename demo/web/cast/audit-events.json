@@ -1,0 +1,30 @@
+{
+  "_comment": "Synthesised audit log timed to claude-code.cast. Each event has `t` (seconds since cast start) and the JSONL payload the proxy would emit. Pre-baked for clarity; structure matches src/audit.ts.",
+  "events": [
+    { "t": 13.6, "level": "info",  "stream": "ingress", "json": { "ts": "T+13.6s", "event": "request_received", "req_id": "req_a1b2c3", "method": "POST", "path": "/v1/messages", "auth": { "tokenId": "claude-code-dev", "scopes": ["proxy:request"] }, "client_ip": "127.0.0.1", "conv_id": "conv_4f7a82" } },
+    { "t": 13.7, "level": "info",  "stream": "auth",    "json": { "ts": "T+13.7s", "event": "auth_pass",        "req_id": "req_a1b2c3", "tokenId": "claude-code-dev", "rate_limit_remaining": 59 } },
+    { "t": 13.8, "level": "debug", "stream": "dlp",     "json": { "ts": "T+13.8s", "event": "dlp_scan_start",   "req_id": "req_a1b2c3", "lanes": ["regex", "dictionary"], "body_bytes": 287 } },
+    { "t": 13.9, "level": "info",  "stream": "dlp",     "json": { "ts": "T+13.9s", "event": "dlp_match", "classifier": "EMAIL",     "policy": "tokenize", "token": "EMAIL_01",      "occurrences": 1 } },
+    { "t": 13.95,"level": "info",  "stream": "dlp",     "json": { "ts": "T+13.95s","event": "dlp_match", "classifier": "PHONE_VN",  "policy": "tokenize", "token": "PHONE_VN_01",   "occurrences": 1 } },
+    { "t": 14.0, "level": "info",  "stream": "dict",    "json": { "ts": "T+14.0s", "event": "dict_match", "classifier": "CODENAME", "policy": "tokenize", "token": "CODENAME_01",   "term_length": 12 } },
+    { "t": 14.05,"level": "info",  "stream": "dict",    "json": { "ts": "T+14.05s","event": "dict_match", "classifier": "PKG",      "policy": "tokenize", "token": "PKG_01",        "term_length": 9 } },
+    { "t": 14.1, "level": "info",  "stream": "dict",    "json": { "ts": "T+14.1s", "event": "dict_match", "classifier": "DBTABLE",  "policy": "tokenize", "token": "DBTABLE_01",    "term_length": 17 } },
+    { "t": 14.2, "level": "info",  "stream": "dlp",     "json": { "ts": "T+14.2s", "event": "dlp_decision",     "req_id": "req_a1b2c3", "decision": "allowed", "matches": 5, "blocked": false } },
+    { "t": 14.3, "level": "info",  "stream": "vault",   "json": { "ts": "T+14.3s", "event": "vault_issue",      "conv_id": "conv_4f7a82", "tokens": ["EMAIL_01", "PHONE_VN_01", "CODENAME_01", "PKG_01", "DBTABLE_01"], "ttl_s": 86400 } },
+    { "t": 14.4, "level": "info",  "stream": "egress",  "json": { "ts": "T+14.4s", "event": "upstream_forward", "req_id": "req_a1b2c3", "url": "https://api.anthropic.com/v1/messages", "model": "claude-sonnet-4-5", "stream": true } },
+    { "t": 14.5, "level": "audit", "stream": "audit",   "json": { "ts": "T+14.5s", "event": "audit_write",      "req_id": "req_a1b2c3", "prev_hash": "0f4a2b…", "this_hash": "3c91d8…", "fsync": true } },
+    { "t": 16.1, "level": "info",  "stream": "egress",  "json": { "ts": "T+16.1s", "event": "upstream_status",  "req_id": "req_a1b2c3", "status": 200, "headers": { "anthropic-organization": "org_xxx", "content-type": "text/event-stream" } } },
+    { "t": 16.4, "level": "info",  "stream": "sse",     "json": { "ts": "T+16.4s", "event": "sse_chunk_in",     "req_id": "req_a1b2c3", "tokens_in_chunk": ["EMAIL_01", "CODENAME_01"], "bytes": 142 } },
+    { "t": 16.5, "level": "info",  "stream": "detok",   "json": { "ts": "T+16.5s", "event": "detokenize",       "token": "EMAIL_01",    "→": "alice@example.com" } },
+    { "t": 16.85,"level": "info",  "stream": "detok",   "json": { "ts": "T+16.85s","event": "detokenize",       "token": "CODENAME_01", "→": "ProjectAlpha" } },
+    { "t": 17.7, "level": "info",  "stream": "sse",     "json": { "ts": "T+17.7s", "event": "sse_chunk_in",     "req_id": "req_a1b2c3", "tokens_in_chunk": ["PKG_01"], "bytes": 87 } },
+    { "t": 18.8, "level": "info",  "stream": "detok",   "json": { "ts": "T+18.8s", "event": "detokenize",       "token": "PKG_01",      "→": "@vng/auth" } },
+    { "t": 19.4, "level": "info",  "stream": "sse",     "json": { "ts": "T+19.4s", "event": "sse_chunk_in",     "req_id": "req_a1b2c3", "tokens_in_chunk": ["DBTABLE_01"], "bytes": 64 } },
+    { "t": 19.5, "level": "info",  "stream": "detok",   "json": { "ts": "T+19.5s", "event": "detokenize",       "token": "DBTABLE_01",  "→": "vng_user_payments" } },
+    { "t": 22.4, "level": "info",  "stream": "detok",   "json": { "ts": "T+22.4s", "event": "detokenize",       "token": "PKG_01",      "→": "@vng/auth", "note": "second occurrence in same SSE stream" } },
+    { "t": 23.6, "level": "info",  "stream": "detok",   "json": { "ts": "T+23.6s", "event": "detokenize",       "token": "EMAIL_01",    "→": "alice@example.com", "note": "model echoed in plan recap" } },
+    { "t": 24.2, "level": "info",  "stream": "detok",   "json": { "ts": "T+24.2s", "event": "detokenize",       "token": "PHONE_VN_01", "→": "0912345678" } },
+    { "t": 24.7, "level": "info",  "stream": "egress",  "json": { "ts": "T+24.7s", "event": "upstream_done",    "req_id": "req_a1b2c3", "duration_ms": 1402, "tokens_used": 312, "cost_usd": 0.0 } },
+    { "t": 24.8, "level": "audit", "stream": "audit",   "json": { "ts": "T+24.8s", "event": "audit_write",      "req_id": "req_a1b2c3", "prev_hash": "3c91d8…", "this_hash": "8b2e07…", "fsync": true, "summary": { "matches_total": 5, "tokens_issued": 5, "tokens_detokenized": 7, "blocked": false } } }
+  ]
+}

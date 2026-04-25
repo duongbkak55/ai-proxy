@@ -301,4 +301,109 @@
 
   // Auto-run on load so the boss sees something immediately
   setTimeout(run, 200);
+
+  // ─── Tabs + CLI Playback ────────────────────────────────────────────────
+  const tabs = document.querySelectorAll(".tab");
+  const panels = document.querySelectorAll("[data-tab-panel]");
+  let cliInited = false;
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const target = tab.dataset.tab;
+      tabs.forEach((t) => {
+        const active = t.dataset.tab === target;
+        t.classList.toggle("active", active);
+        t.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      panels.forEach((p) => {
+        p.hidden = p.dataset.tabPanel !== target;
+      });
+      if (target === "cli" && !cliInited) {
+        cliInited = true;
+        initCliTab();
+      }
+    });
+  });
+
+  let cliPlayer = null;
+  let cliEvents = [];
+  let cliShownIdx = 0;
+  let cliPollHandle = null;
+
+  async function initCliTab() {
+    const playerEl = document.getElementById("player");
+    if (!window.AsciinemaPlayer) {
+      playerEl.innerHTML = '<div style="padding:24px;color:#f85149">asciinema-player CDN không load được — kiểm tra mạng.</div>';
+      return;
+    }
+    cliPlayer = window.AsciinemaPlayer.create(
+      "./cast/claude-code.cast",
+      playerEl,
+      {
+        autoPlay: false,
+        loop: false,
+        theme: "monokai",
+        cols: 110,
+        rows: 32,
+        fit: "width",
+        terminalFontSize: "small",
+        idleTimeLimit: 1.5,
+      },
+    );
+    try {
+      const r = await fetch("./cast/audit-events.json");
+      const data = await r.json();
+      cliEvents = data.events || [];
+    } catch (e) {
+      cliEvents = [];
+    }
+    cliPlayer.addEventListener("play", startAuditPoll);
+    cliPlayer.addEventListener("playing", startAuditPoll);
+    cliPlayer.addEventListener("pause", stopAuditPoll);
+    cliPlayer.addEventListener("ended", stopAuditPoll);
+    document.getElementById("player-replay").addEventListener("click", () => {
+      resetAudit();
+      cliPlayer.seek(0).then(() => cliPlayer.play());
+    });
+  }
+
+  function resetAudit() {
+    cliShownIdx = 0;
+    const stream = document.getElementById("audit-stream");
+    stream.innerHTML = '<div class="audit-empty">— playing… audit events sẽ xuất hiện theo timeline —</div>';
+  }
+
+  function startAuditPoll() {
+    if (cliPollHandle) return;
+    if (cliShownIdx === 0) {
+      const stream = document.getElementById("audit-stream");
+      stream.innerHTML = "";
+    }
+    cliPollHandle = setInterval(pollAudit, 120);
+  }
+
+  function stopAuditPoll() {
+    if (cliPollHandle) {
+      clearInterval(cliPollHandle);
+      cliPollHandle = null;
+    }
+  }
+
+  async function pollAudit() {
+    if (!cliPlayer || !cliEvents.length) return;
+    let now;
+    try { now = await cliPlayer.getCurrentTime(); } catch { return; }
+    if (typeof now !== "number") return;
+    const stream = document.getElementById("audit-stream");
+    while (cliShownIdx < cliEvents.length && cliEvents[cliShownIdx].t <= now) {
+      const ev = cliEvents[cliShownIdx++];
+      const line = document.createElement("div");
+      line.className = `audit-line stream-${ev.stream}`;
+      line.innerHTML =
+        `<span class="audit-stream-tag">[${escapeHtml(ev.stream)}]</span>` +
+        escapeHtml(JSON.stringify(ev.json));
+      stream.appendChild(line);
+      stream.scrollTop = stream.scrollHeight;
+    }
+  }
 })();
