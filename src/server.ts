@@ -30,6 +30,7 @@ import {
   UpstreamShapeError,
   type UpstreamClient,
 } from "./agent-loop.js";
+import { AuthGate } from "./auth.js";
 
 interface Metrics {
   requests_total: number;
@@ -103,31 +104,55 @@ function constantTimeTokenMatch(expected: string, provided: string): boolean {
 }
 
 /**
- * Enforce bearer-token auth on every non-/health route. Returns true if the
- * request has been handled (unauthorized/misconfigured responses already
- * written); returns false if the caller should continue processing.
+ * Enforce bearer-token auth on every non-/health route. Returns either:
+ *   - { handled: true, tokenId? }: response already written (401/429/503) or auth passed.
+ *     If auth passed, `tokenId` is the matched token id (for audit).
+ *   - { handled: false }: this should not happen — every code path writes or returns ok.
+ *
+ * Two modes:
+ *   1. Multi-token (Phase B): if `gate` is provided (config has tokens or tokensFile),
+ *      delegates to AuthGate which supports rotation, expiry, scopes, rate-limit.
+ *   2. Legacy single-token: env-based check against `process.env[config.auth.tokenEnv]`.
+ *      Preserved for backward compatibility with existing deployments.
  */
-function enforceProxyAuth(
+async function enforceProxyAuth(
   req: IncomingMessage,
   res: ServerResponse,
   config: ProxyConfig,
-): boolean {
+  gate: AuthGate | null,
+): Promise<{ handled: true; ok: boolean; tokenId?: string }> {
+  if (gate) {
+    const result = await gate.validate(req.headers);
+    if (result.ok) {
+      return { handled: true, ok: true, tokenId: result.tokenId };
+    }
+    if (result.status === 429) {
+      const retrySec = Math.max(1, Math.ceil((result.retryAfterMs ?? 1000) / 1000));
+      res.setHeader("Retry-After", String(retrySec));
+      writeJson(res, 429, { error: "rate limit exceeded" });
+      return { handled: true, ok: false };
+    }
+    writeJson(res, 401, { error: "unauthorized" });
+    return { handled: true, ok: false };
+  }
+
+  // Legacy env-based path.
   const expected = process.env[config.auth.tokenEnv];
   if (!expected || expected.length === 0) {
     writeJson(res, 503, { error: "proxy auth not configured" });
-    return true;
+    return { handled: true, ok: false };
   }
   const authHeader = req.headers["authorization"];
   if (typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
     writeJson(res, 401, { error: "unauthorized" });
-    return true;
+    return { handled: true, ok: false };
   }
   const provided = authHeader.slice("Bearer ".length).trim();
   if (!constantTimeTokenMatch(expected, provided)) {
     writeJson(res, 401, { error: "unauthorized" });
-    return true;
+    return { handled: true, ok: false };
   }
-  return false;
+  return { handled: true, ok: true };
 }
 
 export interface StartProxyOptions {
@@ -184,6 +209,16 @@ export async function startProxy(opts: StartProxyOptions): Promise<StartedProxy>
         languages: config.astDlp.languages,
       })
     : undefined;
+  // Auth gate: enabled iff multi-token config provided. Otherwise the request
+  // path falls back to the legacy env-based single-token check.
+  const authGate: AuthGate | null =
+    config.auth.tokens.length > 0 || config.auth.tokensFile
+      ? new AuthGate({
+          headerName: config.auth.headerName,
+          inlineTokens: config.auth.tokens,
+          tokensFile: config.auth.tokensFile,
+        })
+      : null;
   const convHeaderLower = config.conversation.headerName.toLowerCase();
   const CONV_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -268,7 +303,8 @@ export async function startProxy(opts: StartProxyOptions): Promise<StartedProxy>
       }
 
       // All non-/health routes require bearer-token auth.
-      if (enforceProxyAuth(req, res, config)) {
+      const authOutcome = await enforceProxyAuth(req, res, config, authGate);
+      if (!authOutcome.ok) {
         return;
       }
 
