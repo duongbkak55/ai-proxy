@@ -340,14 +340,13 @@
       "./cast/claude-code.cast",
       playerEl,
       {
-        autoPlay: false,
+        autoPlay: true,
         loop: false,
         theme: "monokai",
         cols: 110,
         rows: 32,
         fit: "width",
         terminalFontSize: "small",
-        idleTimeLimit: 1.5,
       },
     );
     try {
