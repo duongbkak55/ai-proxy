@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ai-proxy — DLP demo</title>
+  <link rel="stylesheet" href="./demo.css" />
+</head>
+<body>
+  <header class="hdr">
+    <div class="hdr-row">
+      <div>
+        <h1>ai-proxy <span class="hdr-tag">DLP demo</span></h1>
+        <p class="hdr-sub">Code agent gửi prompt → proxy redact secrets/PII/identifiers → upstream chỉ thấy token → reply detokenize về plaintext cho client.</p>
+      </div>
+      <div class="hdr-meta">
+        <code>POST /v1/messages</code>
+        <a href="https://github.com/duongbkak55/ai-proxy" target="_blank" rel="noopener">github.com/duongbkak55/ai-proxy</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="controls">
+    <div class="scenarios">
+      <button data-sample="pii" class="btn btn-sample">PII (email, phone)</button>
+      <button data-sample="codename" class="btn btn-sample">Codename + internal package</button>
+      <button data-sample="secret" class="btn btn-sample">Secret blocked (sk-ant-…)</button>
+      <button data-sample="full" class="btn btn-sample">Full mix (real-world)</button>
+      <button data-sample="custom" class="btn btn-sample btn-custom">Custom…</button>
+    </div>
+    <div class="run-row">
+      <button id="run" class="btn btn-primary">▶ Run pipeline</button>
+      <span class="run-hint">Pipeline chạy 100% trong browser. Không gọi API thật.</span>
+    </div>
+  </section>
+
+  <main class="grid">
+    <article class="pane pane-client">
+      <header class="pane-h">
+        <span class="step">1</span>
+        <h2>CLIENT</h2>
+        <span class="pane-tag">developer's prompt</span>
+      </header>
+      <textarea id="client-input" spellcheck="false" placeholder="Nhập prompt mà code agent (Claude Code / Cline / Cursor...) gửi lên..."></textarea>
+    </article>
+
+    <div class="arrow arrow-1">
+      <span>POST /v1/messages</span>
+      <span class="arrow-glyph">→</span>
+    </div>
+
+    <article class="pane pane-proxy">
+      <header class="pane-h">
+        <span class="step">2</span>
+        <h2>PROXY (DLP pipeline)</h2>
+        <span class="pane-tag">@duongbkak55/ai-proxy</span>
+      </header>
+      <div id="proxy-decision" class="decision decision-empty">
+        <span class="decision-dot"></span>
+        <span class="decision-text">— chưa chạy —</span>
+      </div>
+      <ul id="match-list" class="match-list" aria-label="DLP matches"></ul>
+    </article>
+
+    <div class="arrow arrow-2">
+      <span>redacted body</span>
+      <span class="arrow-glyph">→</span>
+    </div>
+
+    <article class="pane pane-upstream">
+      <header class="pane-h">
+        <span class="step">3</span>
+        <h2>UPSTREAM</h2>
+        <span class="pane-tag">api.anthropic.com</span>
+      </header>
+      <pre id="upstream-out" class="code"><code class="placeholder">— output sau DLP sẽ hiện ở đây —</code></pre>
+    </article>
+  </main>
+
+  <section class="grid-low">
+    <article class="card">
+      <h3><span class="step step-low">4</span> Vault (token → original)</h3>
+      <p class="card-sub">Reversible map, conversation-scoped. TTL 24h mặc định. Plaintext không bao giờ bị log.</p>
+      <table id="vault-table" class="kv">
+        <thead><tr><th>Token (model thấy)</th><th>Original (proxy giữ)</th></tr></thead>
+        <tbody><tr class="empty"><td colspan="2">— chạy pipeline để xem vault —</td></tr></tbody>
+      </table>
+    </article>
+
+    <article class="card">
+      <h3><span class="step step-low">5</span> Audit event (JSONL, fsync'd)</h3>
+      <p class="card-sub">Mỗi request ghi 1 dòng JSONL với hash chain để detect tampering. Plaintext KHÔNG có trong audit.</p>
+      <pre id="audit-out" class="code small"><code class="placeholder">— audit event sẽ hiện ở đây —</code></pre>
+    </article>
+  </section>
+
+  <section class="reply-section">
+    <article class="card card-wide">
+      <h3><span class="step step-low">6</span> Model reply (echo tokens) → <span class="step step-low">7</span> Client sees (detokenized)</h3>
+      <p class="card-sub">Model trả lời với token shape ổn định nhờ DLP-instruction inject vào system prompt. Proxy detokenize trên SSE stream, client thấy plaintext lại.</p>
+      <div class="reply-grid">
+        <div>
+          <div class="reply-label">Upstream → Proxy (model echo)</div>
+          <pre id="reply-upstream" class="code"><code class="placeholder">— reply sẽ hiện sau khi chạy —</code></pre>
+        </div>
+        <div class="reply-arrow">↓</div>
+        <div>
+          <div class="reply-label reply-label-end">Proxy → Client (detokenized)</div>
+          <pre id="reply-client" class="code"><code class="placeholder">—</code></pre>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <footer class="ftr">
+    <span>Pipeline thật trong production có thêm: SQL AST lane (fenced ```sql), Source-code AST lane (fenced ```ts/py/java), Auth lane (bearer token + rate-limit), Allowlist (banned tools, SSRF).</span>
+    <span class="ftr-r">demo bundle: <code>/demo/web/bundle.js</code></span>
+  </footer>
+
+  <script src="./bundle.js"></script>
+  <script src="./demo.js"></script>
+</body>
+</html>
