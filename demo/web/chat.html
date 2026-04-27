@@ -16,6 +16,8 @@
       </div>
       <div class="hdr-meta">
         <a href="./index.html">← DLP simulator</a>
+        <select id="quick-model" class="quick-model-select" title="Chọn model"></select>
+        <button id="log-toggle" class="btn btn-ghost" type="button">Debug Log</button>
         <button id="settings-toggle" class="btn btn-ghost" type="button">Settings</button>
       </div>
     </div>
@@ -52,6 +54,15 @@
     <p class="settings-hint">
       Defaults được nạp từ <code>chat-config.js</code> (env-injected ở build time). Bạn có thể override tạm trong panel này — lưu vào localStorage.
     </p>
+  </section>
+
+  <section id="log-panel" class="log-panel" hidden>
+    <div class="log-toolbar">
+      <span class="log-title">Debug Log</span>
+      <span id="log-conn" class="log-conn log-conn--off">● disconnected</span>
+      <button id="log-clear" class="btn btn-ghost btn-xs" type="button">Clear</button>
+    </div>
+    <div id="log-entries" class="log-entries"></div>
   </section>
 
   <main class="chat-main">

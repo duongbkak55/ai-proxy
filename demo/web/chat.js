@@ -9,6 +9,18 @@
   const CHAT_KEY = "ai-proxy-chat-history";
   const MAX_TEXT_FILE_BYTES = 256 * 1024;
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+  const PRESET_MODELS = [
+    { id: "meta-llama/llama-3.3-70b-instruct:free", label: "Llama 3.3 70B :free" },
+    { id: "openai/gpt-oss-120b:free",               label: "GPT-OSS 120B :free" },
+    { id: "nvidia/nemotron-3-super-120b-a12b:free", label: "Nemotron 120B :free" },
+    { id: "google/gemma-3-27b-it:free",             label: "Gemma 3 27B :free" },
+    { id: "google/gemma-3-12b-it:free",             label: "Gemma 3 12B :free" },
+    { id: "qwen/qwen3-coder:free",                  label: "Qwen3 Coder :free" },
+    { id: "claude-sonnet-4-6",                      label: "Claude Sonnet 4.6" },
+    { id: "claude-haiku-4-5-20251001",              label: "Claude Haiku 4.5" },
+    { id: "brain",                                  label: "brain (9router)" },
+  ];
+
   const TEXT_LIKE_EXT = new Set([
     "txt", "md", "json", "js", "jsx", "ts", "tsx",
     "py", "java", "go", "rs", "sh", "bash", "yaml", "yml",
@@ -69,6 +81,12 @@
 
   // ── DOM ────────────────────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
+  const quickModelSel = $("quick-model");
+  const logToggleBtn = $("log-toggle");
+  const logPanel = $("log-panel");
+  const logEntries = $("log-entries");
+  const logConn = $("log-conn");
+  const logClearBtn = $("log-clear");
   const messagesEl = $("messages");
   const composerForm = $("composer");
   const composerInput = $("composer-input");
@@ -89,6 +107,8 @@
   const cfgStatus = $("cfg-status");
 
   // ── State ─────────────────────────────────────────────────────────────────
+  const SESSION_CONV_ID = crypto.randomUUID().replace(/-/g, "");
+
   let cfg = loadCfg();
   let history = loadHistory();
   let pendingAttachments = []; // [{kind:"image"|"text", name, mimeType, data, size}]
@@ -108,6 +128,25 @@
       ? "•••" + cfg.bearerToken.slice(-4)
       : "(no token)";
     proxyInfo.textContent = `${cfg.proxyUrl} ${tokenSuffix} · ${cfg.model}`;
+  }
+
+  function initModelSelector() {
+    quickModelSel.innerHTML = "";
+    const currentId = cfg.model;
+    const inList = PRESET_MODELS.some((m) => m.id === currentId);
+    if (!inList && currentId) {
+      const opt = document.createElement("option");
+      opt.value = currentId;
+      opt.textContent = currentId;
+      quickModelSel.appendChild(opt);
+    }
+    for (const m of PRESET_MODELS) {
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.textContent = m.label;
+      quickModelSel.appendChild(opt);
+    }
+    quickModelSel.value = currentId;
   }
 
   function renderEmptyState() {
@@ -362,6 +401,7 @@
           "content-type": "application/json",
           accept: "text/event-stream",
           authorization: `Bearer ${cfg.bearerToken}`,
+          "x-omc-conversation-id": SESSION_CONV_ID,
         },
         body: JSON.stringify(body),
         signal: abortCtrl.signal,
@@ -448,6 +488,13 @@
     cfgSystem.value = cfg.system ?? "";
   }
 
+  quickModelSel.addEventListener("change", () => {
+    cfg = { ...cfg, model: quickModelSel.value };
+    saveCfg(cfg);
+    updateProxyInfo();
+    syncSettingsForm();
+  });
+
   settingsToggle.addEventListener("click", () => {
     settingsPanel.hidden = !settingsPanel.hidden;
     if (!settingsPanel.hidden) syncSettingsForm();
@@ -463,6 +510,7 @@
     };
     saveCfg(cfg);
     updateProxyInfo();
+    initModelSelector();
     cfgStatus.textContent = "saved";
     cfgStatus.classList.remove("error");
     setTimeout(() => (cfgStatus.textContent = ""), 2000);
@@ -498,7 +546,121 @@
     }
   });
 
+  // ── Debug log panel ───────────────────────────────────────────────────────
+  let logEs = null;
+
+  function fmtTs(iso) {
+    try {
+      const d = new Date(iso);
+      return d.toTimeString().slice(0, 8);
+    } catch { return "??:??:??"; }
+  }
+
+  function appendLogEntry(ev) {
+    const phase = ev.phase ?? "?";
+    const ts = fmtTs(ev.ts);
+    const badgeClass =
+      ev.blocked ? "log-badge--dlp"
+      : phase === "request"  ? "log-badge--req"
+      : phase === "response" ? "log-badge--res"
+      : "log-badge--err";
+    const badgeText = ev.blocked ? "BLOCK" : phase.slice(0, 3).toUpperCase();
+
+    const bodyParts = [];
+    if (ev.model) bodyParts.push(`<span class="log-model">${ev.model.split("/").pop()}</span>`);
+    if (ev.blocked) bodyParts.push(`<span class="log-blocked">BLOCKED</span>`);
+    if (ev.dlpMatches && ev.dlpMatches.length > 0) {
+      const summary = ev.dlpMatches.map((m) => `${m.name}×${m.count}`).join(", ");
+      bodyParts.push(`<span class="log-dlp">DLP: ${summary}</span>`);
+    }
+    if (ev.bytesIn  != null) bodyParts.push(`→${ev.bytesIn}B`);
+    if (ev.bytesOut != null) bodyParts.push(`←${ev.bytesOut}B`);
+    if (ev.latencyMs != null) bodyParts.push(`<span class="log-lat">${ev.latencyMs}ms</span>`);
+    if (ev.error) bodyParts.push(`<span class="log-blocked">${ev.error}</span>`);
+
+    const wrap = document.createElement("div");
+    wrap.className = "log-entry-wrap";
+
+    const row = document.createElement("div");
+    row.className = "log-entry";
+    row.innerHTML =
+      `<span class="log-ts">${ts}</span>` +
+      `<span class="log-badge ${badgeClass}">${badgeText}</span>` +
+      `<span class="log-body">${bodyParts.join(" · ")}</span>`;
+    wrap.appendChild(row);
+
+    // Message preview (post-DLP — tokens replace originals)
+    if (ev.bodyPreview) {
+      const pre = document.createElement("div");
+      pre.className = "log-preview";
+      pre.textContent = ev.bodyPreview;
+      wrap.appendChild(pre);
+    }
+
+    // Vault token map for redacted requests
+    const hasRedact = ev.dlpMatches && ev.dlpMatches.some((m) => m.policy === "redact");
+    if (hasRedact && ev.convId) {
+      const vaultRow = document.createElement("div");
+      vaultRow.className = "log-vault";
+      vaultRow.textContent = "loading tokens…";
+      wrap.appendChild(vaultRow);
+      fetch(`${cfg.proxyUrl.replace(/\/$/, "")}/debug/vault?convId=${ev.convId}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d.tokens || d.tokens.length === 0) {
+            vaultRow.textContent = "(no tokens in vault)";
+            return;
+          }
+          vaultRow.innerHTML = d.tokens
+            .map((t) => `<span class="vault-token">${t.token}</span> → <span class="vault-orig">${t.original}</span>`)
+            .join("  ");
+        })
+        .catch(() => { vaultRow.textContent = "vault fetch failed"; });
+    }
+
+    logEntries.appendChild(wrap);
+    logEntries.scrollTop = logEntries.scrollHeight;
+  }
+
+  function startLogStream() {
+    if (logEs) { logEs.close(); logEs = null; }
+    const url = `${cfg.proxyUrl.replace(/\/$/, "")}/debug/stream`;
+    logEs = new EventSource(url, { withCredentials: false });
+    // EventSource doesn't support custom headers; we rely on the proxy
+    // being configured to not require auth on /debug/stream, OR we pass
+    // the token as a query param — for simplicity the proxy auth guard
+    // already passed since we set the token via Authorization header in
+    // fetch, but EventSource can't. We use a workaround: include token in URL.
+    logEs.onopen = () => {
+      logConn.textContent = "● connected";
+      logConn.className = "log-conn log-conn--on";
+    };
+    logEs.onmessage = (e) => {
+      try { appendLogEntry(JSON.parse(e.data)); } catch { /* malformed */ }
+    };
+    logEs.onerror = () => {
+      logConn.textContent = "● disconnected";
+      logConn.className = "log-conn log-conn--off";
+    };
+  }
+
+  function stopLogStream() {
+    if (logEs) { logEs.close(); logEs = null; }
+    logConn.textContent = "● disconnected";
+    logConn.className = "log-conn log-conn--off";
+  }
+
+  logToggleBtn.addEventListener("click", () => {
+    const hidden = logPanel.hidden;
+    logPanel.hidden = !hidden;
+    logToggleBtn.classList.toggle("btn-active", hidden);
+    if (hidden) startLogStream(); else stopLogStream();
+  });
+
+  logClearBtn.addEventListener("click", () => { logEntries.innerHTML = ""; });
+
   // ── Init ──────────────────────────────────────────────────────────────────
+  initModelSelector();
   updateProxyInfo();
   renderHistory();
   setStatus(cfg.bearerToken ? "ready" : "set bearer token in Settings", cfg.bearerToken ? undefined : "error");

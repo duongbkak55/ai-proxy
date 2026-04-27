@@ -43,6 +43,9 @@ export interface AuditEvent {
   bytesOut?: number;
   latencyMs?: number;
   error?: string;
+  convId?: string;
+  // Post-DLP preview of last user message — tokens replace originals, safe to log.
+  bodyPreview?: string;
   // Extra, caller-supplied fields. MUST NOT contain raw sensitive data.
   meta?: Record<string, string | number | boolean>;
 }

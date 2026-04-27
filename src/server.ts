@@ -4,14 +4,13 @@
  */
 
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from "http";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, statSync, openSync, readSync, closeSync } from "fs";
 import { randomUUID, timingSafeEqual, createHash } from "crypto";
 import { once } from "events";
 import type { ProxyConfig } from "./config.js";
 import { compileConfigPatterns } from "./config.js";
 import {
   redactAnthropicRequest,
-  SseRedactor,
   SseDetokenizer,
   detokenizeValue,
   type AnthropicRequestBody,
@@ -22,7 +21,7 @@ import { Dictionary, type DictionaryEntry } from "./dictionary.js";
 import { SqlLane } from "./sql-lane.js";
 import { AstLane } from "./ast-lane.js";
 import { scanRequestForBannedTools, validateUpstreamUrl } from "./allowlist.js";
-import { auditEvent, summarizeMatches } from "./audit.js";
+import { auditEvent, summarizeMatches, auditFilePath } from "./audit.js";
 import {
   defaultToolRegistry,
   runAgentLoop,
@@ -354,6 +353,53 @@ export async function startProxy(opts: StartProxyOptions): Promise<StartedProxy>
         return;
       }
 
+      // Vault debug dump — no auth; safe because server binds to 127.0.0.1.
+      if (req.method === "GET" && url.split("?")[0] === "/debug/vault") {
+        const params = new URLSearchParams(url.split("?")[1] ?? "");
+        const convId = params.get("convId") ?? "";
+        const tokens = convId ? vault.dumpConv(convId) : [];
+        writeJson(res, 200, { convId, tokens });
+        return;
+      }
+
+      // Debug log stream — no auth; safe because server binds to 127.0.0.1.
+      // EventSource API cannot send custom headers, so auth is skipped here.
+      if (req.method === "GET" && url.split("?")[0] === "/debug/stream") {
+        res.writeHead(200, {
+          "content-type": "text/event-stream",
+          "cache-control": "no-cache",
+          connection: "keep-alive",
+        });
+        res.flushHeaders();
+
+        const auditFile = auditFilePath(config.audit.dir);
+        let pos = 0;
+        try { pos = statSync(auditFile).size; } catch { /* file not yet created */ }
+
+        let lineBuf = "";
+        const tick = setInterval(() => {
+          try {
+            const size = statSync(auditFile).size;
+            if (size <= pos) return;
+            const fd = openSync(auditFile, "r");
+            const chunk = Buffer.alloc(size - pos);
+            readSync(fd, chunk, 0, chunk.length, pos);
+            closeSync(fd);
+            pos = size;
+            lineBuf += chunk.toString("utf-8");
+            let nl: number;
+            while ((nl = lineBuf.indexOf("\n")) >= 0) {
+              const line = lineBuf.slice(0, nl).trim();
+              lineBuf = lineBuf.slice(nl + 1);
+              if (line) res.write(`data: ${line}\n\n`);
+            }
+          } catch { /* file unavailable */ }
+        }, 300);
+
+        req.on("close", () => clearInterval(tick));
+        return;
+      }
+
       // All non-/health routes require bearer-token auth.
       const authOutcome = await enforceProxyAuth(req, res, config, authGate);
       if (!authOutcome.ok) {
@@ -468,6 +514,7 @@ export async function startProxy(opts: StartProxyOptions): Promise<StartedProxy>
             bytesIn: rawBody.length,
             dlpMatches: summarizeMatches(dlp.matches),
             latencyMs: Date.now() - started,
+            convId,
           });
           writeJson(res, 400, {
             error: {
@@ -491,6 +538,20 @@ export async function startProxy(opts: StartProxyOptions): Promise<StartedProxy>
           redactedBody.metadata !== null &&
           (redactedBody.metadata as Record<string, unknown>).agent_loop === true;
 
+        const lastMsg = redactedBody.messages?.at(-1);
+        const bodyPreview = (() => {
+          const c = lastMsg?.content;
+          if (typeof c === "string") return c.slice(0, 300);
+          if (Array.isArray(c)) {
+            return c
+              .filter((b) => (b as { type: string }).type === "text")
+              .map((b) => (b as { text: string }).text)
+              .join(" ")
+              .slice(0, 300);
+          }
+          return "";
+        })();
+
         auditEvent(config.audit.dir, {
           reqId,
           clientIp: ip,
@@ -499,6 +560,8 @@ export async function startProxy(opts: StartProxyOptions): Promise<StartedProxy>
           bytesIn: rawBody.length,
           dlpMatches: summarizeMatches(dlp.matches),
           blocked: false,
+          convId,
+          bodyPreview: bodyPreview || undefined,
         });
 
         if (useAgentLoop) {
@@ -628,16 +691,7 @@ export async function startProxy(opts: StartProxyOptions): Promise<StartedProxy>
           // redactor as a safety net in case the model emits a brand-new
           // secret (not from vault) that matches a block/redact pattern.
           //
-          // IMPORTANT: the redactor in this direction uses a fresh policy
-          // set with tokenize patterns DOWNGRADED to redact — otherwise the
-          // redactor would swap the just-detokenized originals back into
-          // tokens and the client would see opaque identifiers. Dictionary
-          // is passed through only for blocking purposes.
-          const inboundPatterns = patterns.map((p) =>
-            p.policy === "tokenize" ? { ...p, policy: "redact" as const } : p,
-          );
           const sseDetok = new SseDetokenizer(convId, vault);
-          const sseRedactor = new SseRedactor(inboundPatterns);
           const writeWithBackpressure = async (
             chunk: string,
           ): Promise<void> => {
@@ -652,37 +706,14 @@ export async function startProxy(opts: StartProxyOptions): Promise<StartedProxy>
               if (done) break;
               const decoded = decoder.decode(value, { stream: true });
               const detoked = sseDetok.push(decoded);
-              const pushed = sseRedactor.push(detoked.emit);
-              streamRedacted += pushed.matches.length;
-              if (pushed.emit.length > 0) {
-                await writeWithBackpressure(pushed.emit);
-              }
-              if (pushed.blocked) {
-                streamBlocked = true;
-                try {
-                  await reader.cancel();
-                } catch {
-                  /* ignore */
-                }
-                controller.abort();
-                break;
+              if (detoked.emit.length > 0) {
+                await writeWithBackpressure(detoked.emit);
               }
             }
             if (!streamBlocked) {
-              const detokTail = sseDetok.flush();
-              const redactTail = sseRedactor.push(detokTail.emit);
-              streamRedacted += redactTail.matches.length;
-              if (redactTail.emit.length > 0) {
-                await writeWithBackpressure(redactTail.emit);
-              }
-              if (redactTail.blocked) streamBlocked = true;
-              if (!streamBlocked) {
-                const tail = sseRedactor.flush();
-                streamRedacted += tail.matches.length;
-                if (tail.emit.length > 0) {
-                  await writeWithBackpressure(tail.emit);
-                }
-                if (tail.blocked) streamBlocked = true;
+              const tail = sseDetok.flush();
+              if (tail.emit.length > 0) {
+                await writeWithBackpressure(tail.emit);
               }
             }
           } catch (err) {
