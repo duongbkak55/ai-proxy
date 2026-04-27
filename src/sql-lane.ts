@@ -18,7 +18,9 @@
  * offsets remain valid.
  */
 
-import { Parser } from "node-sql-parser";
+import sqlParserPkg from "node-sql-parser";
+import type { Parser as ParserT } from "node-sql-parser";
+const { Parser } = sqlParserPkg as unknown as { Parser: new () => ParserT };
 import type { DlpMatch } from "./dlp.js";
 import type { TokenVault } from "./vault.js";
 
@@ -55,7 +57,7 @@ const DIALECT_MAP: Record<SqlLaneConfig["dialect"], string> = {
 const PLACEHOLDER_TOKEN_RE = /^[A-Z][A-Z0-9_]*_\d{2,3}$/;
 
 export class SqlLane {
-  private readonly parser: Parser;
+  private readonly parser: ParserT;
   private readonly config: SqlLaneConfig;
   private readonly dialect: string;
 

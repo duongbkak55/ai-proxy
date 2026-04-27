@@ -9,3 +9,5 @@ coverage/
 .vscode/
 .idea/
 *.tsbuildinfo
+.test-run/
+demo/web/chat-config.js

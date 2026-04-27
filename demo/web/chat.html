@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ai-proxy — Live chat</title>
+  <link rel="stylesheet" href="./demo.css" />
+  <link rel="stylesheet" href="./chat.css" />
+</head>
+<body class="chat-body">
+  <header class="hdr">
+    <div class="hdr-row">
+      <div>
+        <h1>ai-proxy <span class="hdr-tag">Live chat</span></h1>
+        <p class="hdr-sub">Browser → ai-proxy (DLP) → api.anthropic.com → ngược lại. Mọi message đi qua redaction lane thật, audit log thật.</p>
+      </div>
+      <div class="hdr-meta">
+        <a href="./index.html">← DLP simulator</a>
+        <button id="settings-toggle" class="btn btn-ghost" type="button">Settings</button>
+      </div>
+    </div>
+  </header>
+
+  <section id="settings-panel" class="settings-panel" hidden>
+    <div class="settings-grid">
+      <label>
+        <span>Proxy URL</span>
+        <input id="cfg-proxy" type="text" placeholder="http://127.0.0.1:11500" />
+      </label>
+      <label>
+        <span>Bearer token</span>
+        <input id="cfg-token" type="password" placeholder="omcp_..." />
+      </label>
+      <label>
+        <span>Model</span>
+        <input id="cfg-model" type="text" placeholder="claude-sonnet-4-5" />
+      </label>
+      <label>
+        <span>max_tokens</span>
+        <input id="cfg-maxtok" type="number" min="1" max="64000" />
+      </label>
+      <label class="settings-wide">
+        <span>System prompt (optional)</span>
+        <textarea id="cfg-system" rows="2" placeholder="You are a helpful assistant..."></textarea>
+      </label>
+    </div>
+    <div class="settings-row">
+      <button id="cfg-save" class="btn btn-primary" type="button">Save</button>
+      <button id="cfg-clear" class="btn btn-ghost" type="button">Clear chat history</button>
+      <span id="cfg-status" class="cfg-status"></span>
+    </div>
+    <p class="settings-hint">
+      Defaults được nạp từ <code>chat-config.js</code> (env-injected ở build time). Bạn có thể override tạm trong panel này — lưu vào localStorage.
+    </p>
+  </section>
+
+  <main class="chat-main">
+    <div id="messages" class="messages" aria-live="polite">
+      <div class="msg-empty">
+        <p>Bắt đầu chat đi. File đính kèm: image (jpg/png/webp/gif) gửi dạng image block, text/code gửi inline.</p>
+      </div>
+    </div>
+
+    <form id="composer" class="composer">
+      <div id="attachments" class="attachments" aria-label="attached files"></div>
+      <div class="composer-row">
+        <label class="attach-btn" title="Attach file">
+          <input id="file-input" type="file" multiple hidden accept="image/*,.txt,.md,.json,.js,.ts,.tsx,.jsx,.py,.java,.go,.rs,.sh,.yaml,.yml,.sql,.css,.html" />
+          <span>📎</span>
+        </label>
+        <textarea
+          id="composer-input"
+          placeholder="Type a message... (Cmd/Ctrl+Enter to send)"
+          rows="2"
+        ></textarea>
+        <button id="send-btn" class="btn btn-primary" type="submit">Send</button>
+      </div>
+      <div class="composer-meta">
+        <span id="status-line" class="status-line">ready</span>
+        <span id="proxy-info" class="proxy-info"></span>
+      </div>
+    </form>
+  </main>
+
+  <footer class="ftr">
+    <span>Mọi prompt → DLP redaction → upstream Anthropic. Reply detokenized về plaintext. Xem audit: <code>node dist/cli.js audit tail</code>.</span>
+  </footer>
+
+  <script src="./chat-config.js"></script>
+  <script src="./chat.js"></script>
+</body>
+</html>

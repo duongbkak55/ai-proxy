@@ -77,6 +77,42 @@ function writeJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(payload);
 }
 
+/**
+ * Parse OMC_PROXY_CORS_ORIGIN into a Set. Empty/unset = CORS disabled.
+ * Special value "*" enables wildcard (echoed back as the requesting origin
+ * when credentials are not used — Anthropic-style usage doesn't need cookies).
+ */
+function parseCorsOrigins(): { wildcard: boolean; origins: Set<string> } {
+  const raw = process.env.OMC_PROXY_CORS_ORIGIN ?? "";
+  const list = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  const wildcard = list.includes("*");
+  return { wildcard, origins: new Set(list) };
+}
+
+function applyCorsHeaders(
+  req: IncomingMessage,
+  res: ServerResponse,
+  cors: { wildcard: boolean; origins: Set<string> },
+  config: ProxyConfig,
+): boolean {
+  const origin = req.headers["origin"];
+  if (typeof origin !== "string" || origin.length === 0) return false;
+  const allowed = cors.wildcard || cors.origins.has(origin);
+  if (!allowed) return false;
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    `Authorization, Content-Type, ${config.conversation.headerName}`,
+  );
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Max-Age", "600");
+  return true;
+}
+
 function clientIp(req: IncomingMessage): string {
   // Only trust X-Forwarded-For when explicitly enabled; otherwise a client
   // can spoof their source IP by setting the header directly.
@@ -290,11 +326,27 @@ export async function startProxy(opts: StartProxyOptions): Promise<StartedProxy>
     },
   };
 
+  const cors = parseCorsOrigins();
+
   const server = createServer(async (req, res) => {
     const reqId = randomUUID();
     const ip = clientIp(req);
     const started = Date.now();
     const url = req.url ?? "/";
+
+    // Apply CORS headers (no-op if origin not in allowlist or CORS disabled).
+    applyCorsHeaders(req, res, cors, config);
+
+    // Preflight: respond before auth so browser can negotiate.
+    if (req.method === "OPTIONS") {
+      const origin = req.headers["origin"];
+      const ok =
+        typeof origin === "string" &&
+        (cors.wildcard || cors.origins.has(origin));
+      res.writeHead(ok ? 204 : 403);
+      res.end();
+      return;
+    }
 
     try {
       if (req.method === "GET" && url === "/health") {

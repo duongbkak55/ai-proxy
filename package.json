@@ -29,7 +29,8 @@
     "typecheck": "tsc --noEmit",
     "start": "node dist/cli.js start",
     "demo:build": "node demo/web/build.mjs",
-    "demo:serve": "npm run demo:build && python3 -m http.server 8000 --directory demo/web"
+    "demo:serve": "npm run demo:build && python3 -m http.server 8000 --directory demo/web",
+    "dev:local": "bash scripts/run-local.sh"
   },
   "dependencies": {
     "@ast-grep/napi": "^0.31.0",
